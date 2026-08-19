@@ -1,51 +1,77 @@
+
 package com.guru.portfolio_backend;
 
 import com.guru.portfolio_backend.entity.ContactMessage;
-
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
+
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 
 @Service
 public class EmailService {
-
-    private final JavaMailSender mailSender;
-
-    public EmailService(JavaMailSender mailSender) {
-        this.mailSender = mailSender;
-    }
 
     public void sendContactEmail(ContactMessage message) {
 
         try {
 
-            SimpleMailMessage email = new SimpleMailMessage();
+            String apiKey = System.getenv("RESEND_API_KEY");
+            String toEmail = System.getenv("MAIL_TO");
 
-            email.setTo(System.getenv("MAIL_TO"));
+            String html = "<h2>New Portfolio Contact</h2>"
+                    + "<p><strong>Name:</strong> " + message.getName() + "</p>"
+                    + "<p><strong>Email:</strong> " + message.getEmail() + "</p>"
+                    + "<p><strong>Business:</strong> " + message.getBusiness() + "</p>"
+                    + "<p><strong>Message:</strong> " + message.getMessage() + "</p>";
 
-            email.setSubject(
-                    "New Portfolio Contact - " + message.getName()
-            );
+            String json = "{"
+                    + "\"from\":\"onboarding@resend.dev\","
+                    + "\"to\":[\"" + toEmail + "\"],"
+                    + "\"subject\":\"New Portfolio Contact - "
+                    + escapeJson(message.getName()) + "\","
+                    + "\"html\":\"" + escapeJson(html) + "\""
+                    + "}";
 
-            email.setText(
-                    "You received a new message from your portfolio.\n\n" +
-                    "Name: " + message.getName() + "\n" +
-                    "Email: " + message.getEmail() + "\n" +
-                    "Business: " + message.getBusiness() + "\n\n" +
-                    "Message:\n" +
-                    message.getMessage()
-            );
+            HttpClient client = HttpClient.newHttpClient();
 
-            email.setFrom(System.getenv("MAIL_USERNAME"));
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create("https://api.resend.com/emails"))
+                    .header("Authorization", "Bearer " + apiKey)
+                    .header("Content-Type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(json))
+                    .build();
 
-            mailSender.send(email);
+            HttpResponse<String> response = client.send(
+                    request,
+                    HttpResponse.BodyHandlers.ofString());
 
-            System.out.println("EMAIL SENT SUCCESSFULLY");
+            if (response.statusCode() >= 200 &&
+                    response.statusCode() < 300) {
+
+                System.out.println("EMAIL SENT SUCCESSFULLY");
+                System.out.println("Resend Response: " + response.body());
+
+            } else {
+
+                System.out.println("EMAIL SENDING FAILED");
+                System.out.println("Resend Status: " + response.statusCode());
+                System.out.println("Resend Response: " + response.body());
+            }
 
         } catch (Exception e) {
 
             System.out.println("EMAIL SENDING FAILED");
             e.printStackTrace();
         }
+    }
+
+    private String escapeJson(String text) {
+
+        return text
+                .replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\n", "\\n")
+                .replace("\r", "\\r");
     }
 }
