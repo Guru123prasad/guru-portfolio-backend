@@ -17,23 +17,35 @@ public class EmailService {
 
     public void sendContactEmail(ContactMessage message) {
 
-        SimpleMailMessage email = new SimpleMailMessage();
+        try {
 
-        email.setTo(System.getenv("MAIL_TO"));
+            SimpleMailMessage email = new SimpleMailMessage();
 
-        email.setSubject(
-                "New Portfolio Contact - " + message.getName());
+            email.setTo(System.getenv("MAIL_TO"));
 
-        email.setText(
-                "You received a new message from your portfolio.\n\n" +
-                        "Name: " + message.getName() + "\n" +
-                        "Email: " + message.getEmail() + "\n" +
-                        "Business: " + message.getBusiness() + "\n\n" +
-                        "Message:\n" +
-                        message.getMessage());
+            email.setSubject(
+                    "New Portfolio Contact - " + message.getName()
+            );
 
-        email.setFrom(System.getenv("MAIL_USERNAME"));
+            email.setText(
+                    "You received a new message from your portfolio.\n\n" +
+                    "Name: " + message.getName() + "\n" +
+                    "Email: " + message.getEmail() + "\n" +
+                    "Business: " + message.getBusiness() + "\n\n" +
+                    "Message:\n" +
+                    message.getMessage()
+            );
 
-        mailSender.send(email);
+            email.setFrom(System.getenv("MAIL_USERNAME"));
+
+            mailSender.send(email);
+
+            System.out.println("EMAIL SENT SUCCESSFULLY");
+
+        } catch (Exception e) {
+
+            System.out.println("EMAIL SENDING FAILED");
+            e.printStackTrace();
+        }
     }
 }
